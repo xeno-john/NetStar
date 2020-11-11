@@ -1,5 +1,10 @@
 # to track sources of information
 
 https://www.docker.com/blog/containerized-python-development-part-1/
+https://docs.docker.com/engine/install/ubuntu/ - install Docker on Ubuntu Linux
 https://cx-oracle.readthedocs.io/en/latest/
 https://www.youtube.com/watch?v=IolxqkL7cD8
+https://gist.github.com/kimus/10012910 - make cx_oracle work in Linux
+https://www.serverlab.ca/tutorials/linux/administration-linux/how-to-set-environment-variables-in-linux/
+https://blog.bitsrc.io/how-to-pass-environment-info-during-docker-builds-1f7c5566dd0e
+https://stackoverflow.com/questions/31198835/can-we-pass-env-variables-through-cmd-line-while-building-a-docker-image-through
