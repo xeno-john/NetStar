@@ -8,25 +8,24 @@
 {% block body %}
 <div class="wrapper">
     <div class="title">
-        NetStar</div>
+        Join us</div>
     <form action="#" method="post">
         <div class="field">
+            <input type="text" name="email" required>
+            <label>E-Mail</label>
+        </div>
+        <div class="field">
             <input type="text" name="username" required>
-            <label>User Name</label>
+            <label>User name</label>
         </div>
         <div class="field">
             <input type="password" name="password" required>
             <label>Password</label>
         </div>
-        <div class="content">
-            <div class="pass-link">
-                <a href="#">Forgot password?</a></div>
-        </div>
+        <br>
         <div class="field">
-            <input type="submit" value="Login">
+            <input type="submit" value="Register">
         </div>
-        <div class="signup-link">
-            Not a member? <a href="/register">Signup now</a></div>
     </form>
 </div>
 {% endblock %}
