@@ -26,7 +26,13 @@
             <input type="submit" value="Login">
         </div>
         <div class="signup-link">
-            Not a member? <a href="/register">Signup now</a></div>
+            Not a member? <a href="/register">Signup now</a>
+        </div>
+        {% if error_message == true %}
+            <div class="field">
+                <label><p style="color:red;">User name or password not found.</p></label>
+            </div>
+        {% endif %}
     </form>
 </div>
 {% endblock %}

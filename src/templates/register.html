@@ -26,6 +26,11 @@
         <div class="field">
             <input type="submit" value="Register">
         </div>
+        {% if error_message == true %}
+            <div class="field">
+                <label><p style="color:red;">Please enter valid credentials.</p></label>
+            </div>
+        {% endif %}
     </form>
 </div>
 {% endblock %}
