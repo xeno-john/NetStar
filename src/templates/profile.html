@@ -9,15 +9,16 @@
 {% block body %}
 <header class="masthead bg-primary text-white text-center" style="background: linear-gradient(83deg, rgba(0, 0, 0, 1) 0%, #359f60 100%);">
     <div class="container"><img class="img-fluid d-block mx-auto mb-5" src="../static/assets/img/profile.png" />
-        <h1>Welcome, {{ user_name }}</h1>
+        <h1>Welcome, {{ user_name }}!</h1>
         <hr class="star-light" />
-        <h2 class="font-weight-light mb-0">We are happy to see you again!</h2>
+        <h2 class="font-weight-light mb-0">We are happy to see you!</h2>
+        <h2 class="font-weight-light mb-0">You have {{ account_credits }} credits on your account.</h2>
     </div>
     <br><br>
     <div class="container">
-        <div class="text-center mt-4"><a class="btn btn-outline-light btn-xl" href="#"><i
+        <div class="text-center mt-4"><a class="btn btn-outline-light btn-xl" href="/profile/reservation"><i
                     class="fa fa-angle-double-right mr-2"></i><span>Proceed to reservation!</span></a><a
-                class="btn btn-outline-light btn-xl" href="#"><i class="icon ion-android-settings mr-2"></i><span>Edit
+                class="btn btn-outline-light btn-xl" href="/profile/account"><i class="icon ion-android-settings mr-2"></i><span>Edit
                     account information</span></a></div>
     </div>
 </header>

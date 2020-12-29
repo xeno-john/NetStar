@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+<title> NetStar</title>
+{% endblock %}
+
+{% block body %}
+<div class="wrapper">
+    <div class="title">
+        NetStar</div>
+    <form action="#" method="post">
+        <div class="field">
+            <input type="text" name="email_original" required>
+            <label>Enter current email</label>
+        </div>
+        <div class="field">
+            <input type="text" name="new_email" required>
+            <label>Enter new email</label>
+        </div>
+        <div class="field">
+            <input type="text" name="new_email_confirmation" required>
+            <label>Confirm new email</label>
+        </div>
+        <br>
+        <div class="field">
+            <input type="submit" value="Confirm">
+        </div>
+        {% if error_message != "" %}
+            <div class="field">
+                <label><p style="color:red;">{{ error_message }}</p></label>
+            </div>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dropdown.css') }}">
+<title> NetStar</title>
+{% endblock %}
+
+{% block body %}
+
+<div class="wrapper">
+    <div class="title">
+        Make reservation
+    </div>
+    <form action="#" method="post">
+        <h5 text-align style="text-align: center;">
+        Gods Room: PC1-PC10<br>
+        Gladiators Room: PC11-PC20<br>
+        Pirates Room: PC21-PC30<br>
+        </h5>
+        <div class="field">
+            <div class="box">
+                <select name="computer">
+                    <option value="" disabled selected>Select the computer</option>
+                    {% for i in computers_list %}
+                    <option value={{ i }}>{{ i }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="field">
+            <input type="text" name="beginning_hour" required>
+            <label>Beginning hour</label>
+        </div>
+        <div class="field">
+            <input type="text" name="ending_hour" required>
+            <label>Ending hour</label>
+        </div>
+        <br>
+        <div class="field">
+            <input type="submit" value="Check">
+        </div>
+    </form>
+</div>
+{% endblock %}
