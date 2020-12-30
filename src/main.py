@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, session
 import os
 import bcrypt
 import logging
+from datetime import timedelta
 
 # we get our credentials from environment variables
 db_user = str(os.environ.get('db_account_user'))
@@ -97,8 +98,14 @@ def profile():
             "select account_credits from clients where user_name = '" + session["username"] + "'").fetchall()[
             0][
             0]
+        # date from oracle translates easily into datetime object in python
+        registration_date = cursor.execute(
+            "select registration_date from clients where user_name = '" + session["username"] + "'").fetchall()[
+            0][
+            0]
         user_name = session["username"]
-        return render_template('profile.html', user_name=user_name, account_credits=account_credits)
+        return render_template('profile.html', user_name=user_name, account_credits=account_credits,
+                               registration_date=registration_date)
     else:
         return redirect(url_for("base"))
 
