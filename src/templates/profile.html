@@ -14,6 +14,21 @@
         <h2 class="font-weight-light mb-0">We are happy to see you!</h2>
         <h2 class="font-weight-light mb-0">You are our client since {{ registration_date }}.</h2>
         <h2 class="font-weight-light mb-0">You have {{ account_credits }} credits on your account.</h2>
+        {% if spent_hours !=0 or spent_minutes != 0 %}
+            <h2 class="font-weight-light mb-0">You have spent {{ spent_hours }} hours
+                {% if spent_minutes !=0 %}
+                and {{ spent_minutes }} minutes
+                {% endif %}
+                in our Internet Caffe.
+            </h2>
+        {% endif %}
+        {% if favorite_computer != 0 %}
+            <h2 class="font-weight-light mb-0">Your favorite computer is PC{{ favorite_computer }}
+            {%  if favorite_computer_room != "" %}
+                ({{ favorite_computer_room }})
+            {% endif %}
+            .</h2>
+        {% endif %}
     </div>
     <br><br>
     <div class="container">

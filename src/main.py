@@ -95,18 +95,46 @@ def verify_register(username, email, password):
 @server.route("/profile")
 def profile():
     if "username" in session:
+        spent_hours = 0
+        spent_minutes = 0
+        computers_played_on = {}
+        favorite_computer = 0
+        favorite_computer_room = ""
+
+        for row in cursor.execute("select computer_id_pk from computers"):
+            computers_played_on[row[0]] = 0
+
         account_credits = cursor.execute(
-            "select account_credits from clients where user_name = '" + session["username"] + "'").fetchall()[
-            0][
-            0]
+            "select account_credits from clients where user_name = '" + session["username"] + "'").fetchall()[0][0]
         # date from oracle translates easily into datetime object in python
         registration_date = cursor.execute(
-            "select registration_date from clients where user_name = '" + session["username"] + "'").fetchall()[
-            0][
-            0]
+            "select registration_date from clients where user_name = '" + session["username"] + "'").fetchall()[0][0]
+
         user_name = session["username"]
+        for row in cursor.execute("select start_time,end_time, computer_id from appointments " +
+                                  "where client_id = (select user_id_pk from clients where user_name = '" +
+                                  session["username"] + "')"):
+            if row[1] < datetime.now():
+                spent_hours = spent_hours + row[1].hour-row[0].hour
+                spent_minutes = spent_minutes + row[1].minute - row[0].minute
+                computers_played_on[row[2]] += 1
+
+        for key in computers_played_on:
+            if favorite_computer < computers_played_on[key]:
+                favorite_computer = key
+
+        if favorite_computer != 0:
+            favorite_computer_room = cursor.execute("select name from rooms where room_id_pk =" +
+                                                    " (select room_fk from computers where computer_id_pk ="
+                                                    + str(favorite_computer) + ")").fetchall()[0][0]
+        while spent_minutes > 60:
+            spent_minutes -= 60
+            spent_hours += 1
+
         return render_template('profile.html', user_name=user_name, account_credits=account_credits,
-                               registration_date=registration_date)
+                               registration_date=registration_date, spent_hours=spent_hours,
+                               spent_minutes=spent_minutes, favorite_computer=favorite_computer,
+                               favorite_computer_room=favorite_computer_room)
     else:
         return redirect(url_for("base"))
 
@@ -155,7 +183,6 @@ def reservation():
 
         error_msg = g_error_msg
         g_error_msg = ""
-        print(error_msg)
 
         return render_template("reservation.html", computers_list=computers_list, gods_1st=gods_1st,
                                gods_last=gods_last, gladiators_1st=gladiators_1st, gladiators_last=gladiators_last,
