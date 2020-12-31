@@ -14,13 +14,13 @@
     </div>
     <form action="#" method="post">
         <h5 text-align style="text-align: center;">
-        Gods Room: PC1-PC10<br>
-        Gladiators Room: PC11-PC20<br>
-        Pirates Room: PC21-PC30<br>
+        Gods Room: PC{{ gods_1st }}-PC{{ gods_last }}<br>
+        Gladiators Room: PC{{ gladiators_1st }}-PC{{ gladiators_last }}<br>
+        Pirates Room: PC{{ pirates_1st }}-PC{{ pirates_last }}<br>
         </h5>
         <div class="field">
             <div class="box">
-                <select name="computer">
+                <select name="computer" required>
                     <option value="" disabled selected>Select the computer</option>
                     {% for i in computers_list %}
                     <option value={{ i }}>{{ i }}</option>
@@ -40,6 +40,11 @@
         <div class="field">
             <input type="submit" value="Check">
         </div>
+        {% if error_msg != "" %}
+            <div class="field">
+                <label><p style="color:red;">{{ error_msg }}</p></label>
+            </div>
+        {% endif %}
     </form>
 </div>
 {% endblock %}
