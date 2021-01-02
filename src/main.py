@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, session
 import os
 import bcrypt
 import logging
+import re
 from datetime import datetime
 
 # we get our credentials from environment variables
@@ -21,6 +22,7 @@ server = Flask(__name__)
 server.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 
 g_error_msg = ""
+
 
 @server.route("/")
 def base():
@@ -97,12 +99,8 @@ def profile():
     if "username" in session:
         spent_hours = 0
         spent_minutes = 0
-        computers_played_on = {}
         favorite_computer = 0
         favorite_computer_room = ""
-
-        for row in cursor.execute("select computer_id_pk from computers"):
-            computers_played_on[row[0]] = 0
 
         account_credits = cursor.execute(
             "select account_credits from clients where user_name = '" + session["username"] + "'").fetchall()[0][0]
@@ -110,18 +108,22 @@ def profile():
         registration_date = cursor.execute(
             "select registration_date from clients where user_name = '" + session["username"] + "'").fetchall()[0][0]
 
+        user_id_pk = cursor.execute("select user_id_pk from clients where user_name = '"
+                                    + session["username"] + "'").fetchall()[0][0]
         user_name = session["username"]
         for row in cursor.execute("select start_time,end_time, computer_id from appointments " +
-                                  "where client_id = (select user_id_pk from clients where user_name = '" +
-                                  session["username"] + "')"):
+                                  "where client_id = " + str(user_id_pk)):
             if row[1] < datetime.now():
-                spent_hours = spent_hours + row[1].hour-row[0].hour
+                spent_hours = spent_hours + row[1].hour - row[0].hour
                 spent_minutes = spent_minutes + row[1].minute - row[0].minute
-                computers_played_on[row[2]] += 1
 
-        for key in computers_played_on:
-            if favorite_computer < computers_played_on[key]:
-                favorite_computer = key
+        command = cursor.execute("select computer_id from ( select count(computer_id) as freq, computer_id " +
+                                 "from appointments WHERE client_id=" + str(user_id_pk) +
+                                 " and appointment_date<sysdate group by computer_id order by freq desc ) " +
+                                 "where rownum=1").fetchall()
+
+        if cursor.rowcount != 0:
+            favorite_computer = command[0][0]
 
         if favorite_computer != 0:
             favorite_computer_room = cursor.execute("select name from rooms where room_id_pk =" +
@@ -195,16 +197,29 @@ def reservation():
 def check_reservation():
     if "username" in session:
         global g_error_msg
-        sysdate = datetime.now().strftime("%d/%m/%Y")
         selected_computer = request.form['computer']
-        beginning_hour_raw = sysdate + ' ' + request.form['beginning_hour']
-        ending_hour_raw = sysdate + ' ' + request.form['ending_hour']
+        hour_RegEx = re.compile(r"^([0-9]|0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$")
 
-        beginning_hour = datetime.strptime(beginning_hour_raw, "%d/%m/%Y %H:%M")
-        ending_hour = datetime.strptime(ending_hour_raw, "%d/%m/%Y %H:%M")
+        # this RegEx tells if input is an actual valid hour.
+        if hour_RegEx.match(request.form['beginning_hour']) is None \
+                or \
+                hour_RegEx.match(request.form['ending_hour']) is None:
+            g_error_msg = "Invalid hour format. Please use HH:MM."
+            return redirect(url_for("reservation"))
 
-        if beginning_hour > ending_hour:
+        beginning_hour = datetime.strptime(request.form["reservation_date"] + ' ' + request.form['beginning_hour'],
+                                           "%Y-%m-%d %H:%M")
+        ending_hour = datetime.strptime(request.form["reservation_date"] + ' ' + request.form['ending_hour'],
+                                        "%Y-%m-%d %H:%M")
+
+        if beginning_hour < datetime.now():
+            g_error_msg = "You cannot make reservations for the past."
+            return redirect(url_for("reservation"))
+        elif beginning_hour > ending_hour:
             g_error_msg = "Beginning hour is later than ending hour."
+            return redirect(url_for("reservation"))
+        elif beginning_hour.hour < 6 or beginning_hour.hour >= 23:
+            g_error_msg = "The given interval doesn't respect our active hours (6-23)."
             return redirect(url_for("reservation"))
         elif not (beginning_hour.minute == 0 or beginning_hour.minute == 30):
             g_error_msg = "Beginning hour must be either o'clock or half."
@@ -213,11 +228,15 @@ def check_reservation():
             g_error_msg = "Ending hour must be either o'clock or half."
             return redirect(url_for("reservation"))
 
+        # row[0] -> start_time
+        # row[1] -> end_time
+        # row[2] -> computer_id
         for row in cursor.execute("select start_time,end_time,computer_id from appointments"):
             if int(selected_computer) == int(row[2]):
                 if beginning_hour <= row[1] and ending_hour >= row[0]:
                     g_error_msg = "Reservation for the given computer overlaps with another reservation."
                     return redirect(url_for("reservation"))
+
         cursor.execute("insert into appointments(computer_id,client_id,appointment_date,start_time,end_time,price) " +
                        "values(" + selected_computer + ",(select user_id_pk from clients where user_name = '" +
                        session["username"] + "')," +

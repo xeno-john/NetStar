@@ -19,6 +19,9 @@
         Pirates Room: PC{{ pirates_1st }}-PC{{ pirates_last }}<br>
         </h5>
         <div class="field">
+            <input type="date" id="start" name="reservation_date" required>
+        </div>
+        <div class="field">
             <div class="box">
                 <select name="computer" required>
                     <option value="" disabled selected>Select the computer</option>
@@ -42,7 +45,7 @@
         </div>
         {% if error_msg != "" %}
             <div class="field">
-                <label><p style="color:red;">{{ error_msg }}</p></label>
+                <label><p style="color:#ff0000;">{{ error_msg }}</p></label>
             </div>
         {% endif %}
     </form>
