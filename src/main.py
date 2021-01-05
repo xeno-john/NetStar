@@ -2,7 +2,6 @@ import cx_Oracle
 from flask import Flask, render_template, request, redirect, url_for, session
 import os
 import bcrypt
-import logging
 import re
 from datetime import datetime
 
@@ -14,14 +13,22 @@ db_password = str(os.environ.get('db_account_pass'))
 db_connection = cx_Oracle.connect(db_user + '/' + db_password + '@//localhost:1521/xe')
 # we create a cursor variable to execute commands
 cursor = db_connection.cursor()
-
-# cursor.execute("alter session set NLS_DATE_FORMAT='hh24:mi'")
-
 server = Flask(__name__)
-
 server.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
-
 g_error_msg = ""
+
+
+def calculate_appointment_price(num_of_minutes):
+    calculated_price = 0
+
+    if 30 <= num_of_minutes <= 120:
+        calculated_price = 4 * (num_of_minutes/60)
+    elif 150 <= num_of_minutes <= 240:
+        calculated_price = 3.5 * (num_of_minutes/60)
+    else:
+        calculated_price = 3 * (num_of_minutes/60)
+
+    return calculated_price
 
 
 @server.route("/")
@@ -82,7 +89,6 @@ def verify_register(username, email, password):
         command = str(
             "insert into clients(user_name,e_mail,password,registration_date,account_credits) values('"
             + username + "','" + email + "','" + hashed_password.decode('utf-8') + "',SYSDATE,0)")
-        logging.info("Executed " + command)
         cursor.execute(command)
         cursor.execute("commit work")
     except cx_Oracle.DatabaseError as exc:
@@ -200,6 +206,9 @@ def check_reservation():
         selected_computer = request.form['computer']
         hour_RegEx = re.compile(r"^([0-9]|0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$")
 
+        user_id_pk = cursor.execute("select user_id_pk from clients where user_name = '"
+                                    + session["username"] + "'").fetchall()[0][0]
+
         # this RegEx tells if input is an actual valid hour.
         if hour_RegEx.match(request.form['beginning_hour']) is None \
                 or \
@@ -230,21 +239,31 @@ def check_reservation():
 
         # row[0] -> start_time
         # row[1] -> end_time
-        # row[2] -> computer_id
-        for row in cursor.execute("select start_time,end_time,computer_id from appointments"):
-            if int(selected_computer) == int(row[2]):
-                if beginning_hour <= row[1] and ending_hour >= row[0]:
-                    g_error_msg = "Reservation for the given computer overlaps with another reservation."
-                    return redirect(url_for("reservation"))
+        for row in cursor.execute("select start_time,end_time from appointments where computer_id = "
+                                  + str(selected_computer)):
+            if beginning_hour < row[1] and ending_hour >= row[0]:
+                g_error_msg = "Reservation for the given computer overlaps with another reservation."
+                return redirect(url_for("reservation"))
+
+        for row in cursor.execute("select start_time,end_time from appointments where client_id =" + str(user_id_pk)):
+            if beginning_hour < row[1] and ending_hour >= row[0]:
+                g_error_msg = "One cannot have more than a reservation for a given period."
+                return redirect(url_for("reservation"))
+
+        price = calculate_appointment_price((ending_hour.hour - beginning_hour.hour)*60
+                                            + ending_hour.minute - beginning_hour.minute)
 
         cursor.execute("insert into appointments(computer_id,client_id,appointment_date,start_time,end_time,price) " +
                        "values(" + selected_computer + ",(select user_id_pk from clients where user_name = '" +
                        session["username"] + "')," +
                        "to_date('" + str(beginning_hour) + "','YYYY/MM/DD hh24:MI:SS'),to_date('" +
                        str(beginning_hour) + "','YYYY/MM/DD hh24:MI:SS'),to_date('" + str(ending_hour) +
-                       "','YYYY/MM/DD hh24:MI:SS'),6)")
+                       "','YYYY/MM/DD hh24:MI:SS')," + str(price) + ")")
         cursor.execute("commit work")
         return redirect(url_for("profile"))
+
+    else:
+        return redirect(url_for("login"))
 
 
 @server.route("/profile/account", methods=['GET'])
@@ -285,8 +304,7 @@ def username_page_post():
         new_username_confirmation = request.form["new_username_confirmation"]
         user_id_pk = \
             cursor.execute("select user_id_pk from clients where user_name = '" + session["username"] + "'").fetchall()[
-                0][
-                0]
+                0][0]
         username_from_db = \
             cursor.execute("select user_name from clients where user_id_pk = " + str(user_id_pk)).fetchall()[0][0]
         if current_username != username_from_db:
@@ -322,11 +340,9 @@ def email_page_post():
         new_email_confirmation = request.form["new_email_confirmation"]
         user_id_pk = \
             cursor.execute("select user_id_pk from clients where user_name = '" + session["username"] + "'").fetchall()[
-                0][
-                0]
+                0][0]
         email_from_db = \
-            cursor.execute("select e_mail from clients where user_id_pk = " + str(user_id_pk)).fetchall()[0][
-                0]
+            cursor.execute("select e_mail from clients where user_id_pk = " + str(user_id_pk)).fetchall()[0][0]
         if current_email != email_from_db:
             return render_template("email.html", error_message="Current email is not correct.")
         elif new_email != new_email_confirmation:
@@ -358,12 +374,10 @@ def password_page_post():
         new_password = request.form["new_password"]
         new_password_confirmation = request.form["new_password_confirmation"]
         user_id_pk = \
-            cursor.execute("select user_id_pk from clients where user_name = '" + session["username"] + "'").fetchall()[
-                0][
-                0]
+            cursor.execute("select user_id_pk from clients where user_name = '" +
+                           session["username"] + "'").fetchall()[0][0]
         password_from_db = \
-            cursor.execute("select password from clients where user_id_pk = " + str(user_id_pk)).fetchall()[0][
-                0]
+            cursor.execute("select password from clients where user_id_pk = " + str(user_id_pk)).fetchall()[0][0]
         if not bcrypt.checkpw(current_password.encode('utf-8'), password_from_db.encode('utf-8')):
             return render_template("password.html", error_message="Incorrect password.")
         elif new_password != new_password_confirmation:
@@ -371,10 +385,39 @@ def password_page_post():
                                                                   "new password.")
         else:
             cursor.execute("update clients set password = '" + bcrypt.hashpw(new_password.encode('utf-8'),
-                                                                             bcrypt.gensalt()).decode(
-                'utf-8') + "' where user_id_pk = " + str(
-                user_id_pk))
+                           bcrypt.gensalt()).decode('utf-8') + "' where user_id_pk = " + str(user_id_pk))
             cursor.execute("commit work")
+        return redirect(url_for("login"))
+
+    else:
+        return redirect(url_for("login"))
+
+
+@server.route("/configurations", methods=['GET'])
+def configurations():
+    if "username" in session:
+        components = ["CPU: ", "GPU: ", "RAM: ", "Monitor: ", "Mouse: ", "Keyboard: "]
+        room_names = []
+        room_confs = []
+        temp_str = ""
+
+        # first, we get the number of rooms (& of configurations)
+        num_of_rooms = cursor.execute("select count(*) from rooms").fetchall()[0][0]
+
+        for index in range(1, num_of_rooms + 1):
+            # pseudo-for, to parse properly the query result
+            for row in cursor.execute("select name, cpu, gpu, ram, monitor, mouse, keyboard from rooms r," +
+                                      " computer_configuration c" + " where r.configuration_type_fk = c.computer_cfg_id_pk "
+                                      + "and room_id_pk =" + str(index)):
+                room_names.append(str(row[0]) + os.linesep)
+                for i in range(1, len(row)):
+                    temp_str += components[i-1] + row[i] + os.linesep
+                room_confs.append(temp_str)
+                temp_str = ""
+
+        return render_template("configurations.html", room_names=room_names, room_confs=room_confs)
+
+    else:
         return redirect(url_for("login"))
 
 
