@@ -22,11 +22,11 @@ def calculate_appointment_price(num_of_minutes):
     calculated_price = 0
 
     if 30 <= num_of_minutes <= 120:
-        calculated_price = 4 * (num_of_minutes/60)
+        calculated_price = 4 * (num_of_minutes / 60)
     elif 150 <= num_of_minutes <= 240:
-        calculated_price = 3.5 * (num_of_minutes/60)
+        calculated_price = 3.5 * (num_of_minutes / 60)
     else:
-        calculated_price = 3 * (num_of_minutes/60)
+        calculated_price = 3 * (num_of_minutes / 60)
 
     return calculated_price
 
@@ -56,8 +56,9 @@ def base_get_login_data():
 def verify_login(username, password):
     login_result = False
 
-    for row in cursor.execute("select user_name,password from clients"):
-        if row[0] == username and bcrypt.checkpw(password.encode('utf-8'), row[1].encode('utf-8')):
+    for row in cursor.execute("select user_name,password from clients where user_id_pk = " +
+                              "(select user_id_pk from clients where user_name = '" + username + "')"):
+        if bcrypt.checkpw(password.encode('utf-8'), row[1].encode('utf-8')):
             login_result = True
             break
 
@@ -118,14 +119,15 @@ def profile():
                                     + session["username"] + "'").fetchall()[0][0]
         user_name = session["username"]
         for row in cursor.execute("select start_time,end_time, computer_id from appointments " +
-                                  "where client_id = " + str(user_id_pk)):
+                                  "where client_id = " + str(user_id_pk) + " and employee_id_pk is not NULL"):
             if row[1] < datetime.now():
                 spent_hours = spent_hours + row[1].hour - row[0].hour
                 spent_minutes = spent_minutes + row[1].minute - row[0].minute
 
         command = cursor.execute("select computer_id from ( select count(computer_id) as freq, computer_id " +
                                  "from appointments WHERE client_id=" + str(user_id_pk) +
-                                 " and appointment_date<sysdate group by computer_id order by freq desc ) " +
+                                 " and appointment_date<sysdate and employee_id_pk is not NULL " +
+                                 "group by computer_id order by freq desc ) " +
                                  "where rownum=1").fetchall()
 
         if cursor.rowcount != 0:
@@ -250,7 +252,7 @@ def check_reservation():
                 g_error_msg = "One cannot have more than a reservation for a given period."
                 return redirect(url_for("reservation"))
 
-        price = calculate_appointment_price((ending_hour.hour - beginning_hour.hour)*60
+        price = calculate_appointment_price((ending_hour.hour - beginning_hour.hour) * 60
                                             + ending_hour.minute - beginning_hour.minute)
 
         cursor.execute("insert into appointments(computer_id,client_id,appointment_date,start_time,end_time,price) " +
@@ -385,7 +387,8 @@ def password_page_post():
                                                                   "new password.")
         else:
             cursor.execute("update clients set password = '" + bcrypt.hashpw(new_password.encode('utf-8'),
-                           bcrypt.gensalt()).decode('utf-8') + "' where user_id_pk = " + str(user_id_pk))
+                                                                             bcrypt.gensalt()).decode(
+                'utf-8') + "' where user_id_pk = " + str(user_id_pk))
             cursor.execute("commit work")
         return redirect(url_for("login"))
 
@@ -407,11 +410,12 @@ def configurations():
         for index in range(1, num_of_rooms + 1):
             # pseudo-for, to parse properly the query result
             for row in cursor.execute("select name, cpu, gpu, ram, monitor, mouse, keyboard from rooms r," +
-                                      " computer_configuration c" + " where r.configuration_type_fk = c.computer_cfg_id_pk "
-                                      + "and room_id_pk =" + str(index)):
+                                      " computer_configuration c" +
+                                      " where r.configuration_type_fk = c.computer_cfg_id_pk " +
+                                      "and room_id_pk =" + str(index)):
                 room_names.append(str(row[0]) + os.linesep)
                 for i in range(1, len(row)):
-                    temp_str += components[i-1] + row[i] + os.linesep
+                    temp_str += components[i - 1] + row[i] + os.linesep
                 room_confs.append(temp_str)
                 temp_str = ""
 
@@ -419,6 +423,88 @@ def configurations():
 
     else:
         return redirect(url_for("login"))
+
+
+@server.route("/employee_login", methods=['GET'])
+def employee_login():
+    employees = []
+    for row in cursor.execute("select first_name,last_name from ic_employees"):
+        employees.append(row[0] + " " + row[1] + " ")
+
+    return render_template("employee_login.html", employees=employees)
+
+
+@server.route("/employee_login", methods=['POST'])
+def employee_login_post():
+    session["employee_id"] = request.form["employee_id_pk"]
+    return redirect(url_for("employee_password"))
+
+
+@server.route("/employee_password", methods=['GET'])
+def employee_password():
+    password_flag = False
+    password = cursor.execute("select password from ic_employees where employee_id_pk = " +
+                              str(session["employee_id"])).fetchall()[0][0]
+    if password is not None:
+        password_flag = True
+
+    session["password_flag"] = password_flag
+
+    if "error_msg" not in session:
+        error_msg = ""
+    else:
+        error_msg = session["error_msg"]
+        session["error_msg"] = ""
+
+    return render_template("employee_password.html", password_flag=password_flag, error_msg=error_msg)
+
+
+@server.route("/employee_password", methods=['POST'])
+def employee_password_post():
+    if session["password_flag"] is False:
+        if request.form["new_password"] == request.form["confirmation"]:
+            hashed_password = bcrypt.hashpw(request.form["new_password"].encode('utf-8'), bcrypt.gensalt())
+            cursor.execute("update ic_employees set password = '" + hashed_password.decode('utf-8') +
+                           "' where employee_id_pk = " + str(session["employee_id"]))
+            cursor.execute("commit work")
+            return redirect(url_for("employee_login"))
+        else:
+            session["error_msg"] = "Please enter the same password."
+            return redirect(url_for("employee_password"))
+    else:
+        db_pass = cursor.execute("select password from ic_employees where employee_id_pk = " +
+                                 str(session["employee_id"])).fetchall()[0][0]
+        if not bcrypt.checkpw(request.form["password"].encode('utf-8'), db_pass.encode('utf-8')):
+            session["error_msg"] = "Incorrect password."
+            return redirect(url_for("employee_password"))
+        else:
+            session["logged"] = True
+            return redirect(url_for("employee_page"))
+
+
+@server.route("/employee_page", methods=['GET'])
+def employee_page():
+    if "logged" in session:
+        appointments = []
+        appointment_ids = []
+        for row in cursor.execute("select appointment_id,start_time,end_time,client_id from appointments " +
+                                  "where appointment_date>sysdate and employee_id_pk is NULL"):
+            appointments.append("Appointment ID: " + str(row[0]) + "\nStart time: " + str(row[1]) + "\nEnd time: " +
+                                str(row[2]) + "\nClient: " + str(row[3]))
+            appointment_ids.append(row[0])
+
+        return render_template("employee_page.html", appointments=appointments, appointment_ids=appointment_ids)
+    else:
+        return redirect(url_for("employee_login"))
+
+
+@server.route("/employee_page", methods=['POST'])
+def employee_page_post():
+    cursor.execute("update appointments set employee_id_pk = " + str(session["employee_id"]) +
+                   " where appointment_id = " + str(request.form["appointment"]))
+    cursor.execute("commit work")
+
+    return redirect(url_for("employee_page"))
 
 
 if __name__ == "__main__":

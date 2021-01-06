@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block head %}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+<title>Profile</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='assets/bootstrap/css/bootstrap.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='assets/fonts/font-awesome.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dropdown.css') }}">
+{% endblock %}
+{% block body %}
+<header class="masthead bg-primary text-white text-center" style="background: linear-gradient(83deg, rgba(0, 0, 0, 1) 0%, #359f60 100%);">
+    <div class="container"><img class="img-fluid d-block mx-auto mb-5" src="../static/assets/img/profile.png" />
+        <h1>Welcome!</h1>
+        <hr class="star-light" />
+        {% if appointments|length != 0%}
+        <h2>While you were away, the following appointments have been made:</h2>
+        {% else %}
+        <h2>Currently, there are no appointments to be validated.</h2>
+        {% endif %}
+        {% for appointment in appointments %}
+            <div class="container pt-3">
+                <h3 style="white-space: pre-line;"><u>Appointment {{ loop.index }}</u><br>{{ appointment }}</h3><br>
+            </div>
+        {% endfor %}
+        {% if appointments|length != 0%}
+        <form action="#" method="post">
+            <select name="appointment" required>
+                <option value="" disabled selected>Select which appointment to validate:</option>
+                {% for appointment in appointment_ids %}
+                    <option value={{ appointment }}>{{ appointment }}</option>
+                {% endfor %}
+            </select>
+            <input type="submit" value="Validate">
+        </form>
+        {% else %}
+            <br><br><br><br><br><br><br><br><br>
+        {% endif %}
+    </div>
+</header>
+{% endblock %}
+
+</html>
