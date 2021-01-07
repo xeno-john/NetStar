@@ -101,7 +101,7 @@ def verify_register(username, email, password):
     return ret_value
 
 
-@server.route("/profile")
+@server.route("/profile", methods=['GET'])
 def profile():
     if "username" in session:
         spent_hours = 0
@@ -147,6 +147,19 @@ def profile():
                                favorite_computer_room=favorite_computer_room)
     else:
         return redirect(url_for("base"))
+
+
+@server.route("/profile", methods=['POST'])
+def profile_post():
+    if "username" in session:
+        cursor.execute("insert into feedbacks(client_fk,message,feedback_date)" +
+                       "values((select user_id_pk from clients where user_name = '" + session["username"] +
+                       "'),'" + request.form["text"] + "',sysdate)")
+        cursor.execute("commit work")
+        return redirect(url_for("profile"))
+    else:
+        return redirect(url_for("login"))
+
 
 
 @server.route("/profile/reservation")
@@ -505,6 +518,16 @@ def employee_page_post():
     cursor.execute("commit work")
 
     return redirect(url_for("employee_page"))
+
+
+@server.route("/feedbacks", methods=['GET'])
+def feedbacks():
+    clients = []
+    client_feedbacks = []
+    for row in cursor.execute("select user_name, message from clients c, feedbacks f where c.user_id_pk = f.client_fk"):
+        clients.append(row[0])
+        client_feedbacks.append(row[1])
+    return render_template("feedbacks.html", clients=clients, feedbacks=client_feedbacks)
 
 
 if __name__ == "__main__":

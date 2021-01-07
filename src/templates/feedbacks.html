@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block head %}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+<title>Profile</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='assets/bootstrap/css/bootstrap.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='assets/fonts/font-awesome.min.css') }}">
+{% endblock %}
+{% block body %}
+<header class="masthead bg-primary text-white text-center" style="background: linear-gradient(83deg, rgba(0, 0, 0, 1) 0%, #359f60 100%);width:auto;height:auto;">
+    <div class="container"><img class="img-fluid d-block mx-auto mb-5" src="../static/assets/img/feedback.png" />
+        <h2>What our clients say.</h2>
+        <hr class="star-light" />
+        {%for feedback in feedbacks %}
+            <div class="container" style="width: 555px;border: 2px solid #333;padding: 15px 10px;background-color: #1a252f;word-wrap: break-word;">
+                <u><h2>{{ clients[loop.index0] }}</h2></u>
+                <hr style="height:1px;border:none;color:#333;background-color:#333;" />
+                <h6>{{ feedback }}</h6>
+            </div>
+            <br>
+        {% endfor %}
+    </div>
+</header>
+{% endblock %}
+
+</html>
