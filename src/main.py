@@ -268,12 +268,18 @@ def check_reservation():
         price = calculate_appointment_price((ending_hour.hour - beginning_hour.hour) * 60
                                             + ending_hour.minute - beginning_hour.minute)
 
+        credits = ending_hour.hour - beginning_hour.hour + (ending_hour.minute - beginning_hour.minute)/60
+
         cursor.execute("insert into appointments(computer_id,client_id,appointment_date,start_time,end_time,price) " +
                        "values(" + selected_computer + ",(select user_id_pk from clients where user_name = '" +
                        session["username"] + "')," +
                        "to_date('" + str(beginning_hour) + "','YYYY/MM/DD hh24:MI:SS'),to_date('" +
                        str(beginning_hour) + "','YYYY/MM/DD hh24:MI:SS'),to_date('" + str(ending_hour) +
                        "','YYYY/MM/DD hh24:MI:SS')," + str(price) + ")")
+
+        cursor.execute("update clients set account_credits = account_credits + " + str(credits) +
+                       " where user_id_pk = " + str(user_id_pk))
+
         cursor.execute("commit work")
         return redirect(url_for("profile"))
 
