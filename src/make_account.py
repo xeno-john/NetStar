@@ -13,7 +13,7 @@ passwords = ["passw1", "passw2", "passw3", "passw4", "passw5"]
 driver = webdriver.Chrome()
 
 if __name__ == "__main__":
-    for i in range(0, 5):
+    for i in range(5):
         driver.get("localhost:5000/register")
         driver.find_element_by_xpath("/html/body/div/form/div[1]/input").send_keys(emails[i])
         driver.find_element_by_xpath("/html/body/div/form/div[2]/input").send_keys(users[i])
